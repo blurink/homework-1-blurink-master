@@ -35,12 +35,12 @@ def extract_gt_orfs(record, start_codons, stop_codons, validate_cds=True, verbos
     orfs = []
     for region in cds_regions:
         loc = region.location
-        seq = record.seq[loc.start.position:loc.end.position]
-        if region.strand == -1:
+        seq = record.seq[loc.start:loc.end]
+        if loc.strand == -1:
             seq = seq.reverse_complement()
-            
+
         if not validate_cds:
-            orfs.append((region.strand, loc.start.position, loc.end.position))
+            orfs.append((loc.strand, int(loc.start), int(loc.end)))
             continue
 
         try:
@@ -53,16 +53,16 @@ def extract_gt_orfs(record, start_codons, stop_codons, validate_cds=True, verbos
                 ), f"Stop codon {codon} found in the middle of the sequence!"
 
             # The CDS looks fine, add it to the ORFs
-            orfs.append((region.strand, loc.start.position, loc.end.position))
+            orfs.append((loc.strand, int(loc.start), int(loc.end)))
 
         except AssertionError as ex:
             if verbose:
                 print(
                     "Skipped CDS at region [%d - %d] on strand %d"
-                    % (loc.start.position, loc.end.position, region.strand)
+                    % (int(loc.start), int(loc.end), loc.strand)
                 )
                 print("\t", str(ex))
-                
+
     # Some ORFs in paramecium have lenghts not divisible by 3. Remove these
     orfs = [orf for orf in orfs if (orf[2] - orf[1]) % 3 == 0]
 
@@ -90,21 +90,18 @@ def find_orfs(sequence : str, start_codons, stop_codons):
     i = 0
     while i < len(sequence) - 2:
         if not flag:
-            for codon in start_codons:
-                if sequence[i : i + 3] == codon: 
-                    start_loc.append(i)
-                    flag = True
+            if sequence[i : i + 3] in start_codons:
+                start_loc.append(i)
+                flag = True
         else:
-            for codon in stop_codons:
-                if sequence[i : i + 3] == codon: 
-                    stop_loc.append(i + 2)
-                    flag = False
+            if sequence[i : i + 3] in stop_codons:
+                stop_loc.append(i + 3)
+                flag = False
         i = i + 3
         
-    return [(i, j) for i in start_loc for j in stop_loc]
+    return [(start_loc[i], stop_loc[i]) for i in range(len(stop_loc))]
 
-
-def find_all_orfs(sequence, start_codons, stop_codons):
+def find_all_orfs(sequence : str, start_codons, stop_codons):
     """Find ALL the possible ORF candidates in the sequence using all six
     reading frames.
 
@@ -121,8 +118,16 @@ def find_all_orfs(sequence, start_codons, stop_codons):
         for reference strand and -1 for reverse complement.
 
     """
-    raise NotImplementedError()
+    orfs = []
 
+    for i in range(3): orfs.extend([(1, j + i, k + i) for (j, k) in find_orfs(sequence[i:], start_codons, stop_codons)])
+
+    nucleotide_map = {"A" : "T", "T" : "A", "G" : "C", "C" : "G"}
+    strand_complement = "".join([nucleotide_map[x] for x in sequence])
+
+    n = len(sequence)
+    for i in range(3): orfs.extend([(-1, n - (k + i), n - (j + i)) for (j, k) in find_orfs(strand_complement[::-1][i:], start_codons, stop_codons)])
+    return orfs
 
 def translate_to_protein(seq):
     """Translate a nucleotide sequence into a protein sequence.
