@@ -142,7 +142,33 @@ def translate_to_protein(seq):
         The translated protein sequence.
 
     """
-    raise NotImplementedError()
+    amino_acids = ["A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"]
+    codons =    [["GCT", "GCC", "GCA", "GCG"],
+                ["TGT", "TGC"],
+                ["GAT", "GAC"],
+                ["GAA", "GAG"],
+                ["TTT", "TTC"],
+                ["GGT", "GGC", "GGA", "GGG"],
+                ["CAT", "CAC"],
+                ["ATT", "ATC", "ATA"],
+                ["AAA", "AAG"],
+                ["TTA", "TTG", "CTT", "CTC", "CTA", "CTG"],
+                ["ATG"],
+                ["AAT", "AAC"],
+                ["CCT", "CCC", "CCA", "CCG"],
+                ["CAA", "CAG"],
+                ["CGT", "CGC", "CGA", "CGG", "AGA", "AGG"],
+                ["TCT", "TCC", "TCA", "TCG", "AGT", "AGC"],
+                ["ACT", "ACC", "ACA", "ACG"],
+                ["GTT", "GTC", "GTA", "GTG"],
+                ["TGG"],
+                ["TAT", "TAC"]]
+    amino_acid_sequence = ""
+    for i in range(0, len(seq), 3):
+        codon = seq[i : (i + 3)]
+        for j in range(len(codons)):
+            if codon in codons[j]: amino_acid_sequence += amino_acids[j]
+    return amino_acid_sequence
 
 
 def find_all_orfs_nested(sequence, start_codons, stop_codons):
